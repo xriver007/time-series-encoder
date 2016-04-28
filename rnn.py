@@ -9,6 +9,9 @@ trX, trY = loadLinearDataset()
 trX = trX.reshape( (361, 20, 1) )
 trX = np.transpose(trX, (1,0,2) )
 
+timeSteps, nSamples, nFeats = trX.shape
+
+
 def floatX(X):
     return np.asarray(X, dtype=theano.config.floatX)
 
@@ -66,13 +69,15 @@ class rmsprop(object):
             updates.append((param, param + update2))
         return updates
 
-X = T.tensor3()
-s0 = theano.shared(np.zeros( (361,100), dtype=theano.config.floatX))
+memSize = 100   
+    
+X = T.tensor3() 
+s0 = theano.shared(np.zeros( (nSamples,memSize), dtype=theano.config.floatX))
 Y = T.imatrix()
 
-w1 = init_weights((1, 100))
-wH = init_weights((100, 100))
-w2 = init_weights((100,2))
+w1 = init_weights((nFeats, memSize))
+wH = init_weights((memSize, memSize))
+w2 = init_weights((memSize, 2))
 
 [s, y], _ = theano.scan(foward, sequences=X, outputs_info=[s0, None], non_sequences=[w1, wH, w2], strict=True)
 py_x = y[-1]

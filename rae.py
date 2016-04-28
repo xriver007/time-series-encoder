@@ -7,7 +7,10 @@ from sklearn import datasets
 trX, trY = loadLinearDataset()
 
 trX = trX.reshape( (361, 20, 1) ) # samples X time X features
-trX = np.transpose(trX, (1,0,2) )
+trX = np.transpose(trX, (1,0,2) ) # time X samples X feats
+
+timeSteps, nSamples, nFeats = trX.shape
+
 
 def floatX(X):
     return np.asarray(X, dtype=theano.config.floatX)
@@ -74,13 +77,15 @@ class rmsprop(object):
             updates.append((param, param + update2))
         return updates
 
+memSize = 50    
+    
 X = T.tensor3() 
-s0 = theano.shared(np.zeros( (361,50), dtype=theano.config.floatX))
-s0_2 = theano.shared(np.zeros( (361,50), dtype=theano.config.floatX))
+s0 = theano.shared(np.zeros( (nSamples,memSize), dtype=theano.config.floatX))
+s0_2 = theano.shared(np.zeros( (nSamples,memSize), dtype=theano.config.floatX))
 
-w1 = init_weights((1, 50))
-wH = init_weights((50, 50))
-w2 = init_weights((50,1))
+w1 = init_weights((nFeats, memSize))
+wH = init_weights((memSize, memSize))
+w2 = init_weights((memSize,1))
 
 [s, y], _ = theano.scan(encode, sequences=X, outputs_info=[s0, None], non_sequences=[w1, wH, w2], strict=True)
 
