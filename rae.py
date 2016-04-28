@@ -26,7 +26,7 @@ def mse(y1, y2):
 
 def encode(x_t, mem, w1, wH, w2):
     s_t = T.tanh(T.dot(x_t,w1) + T.dot(mem,wH))
-    y_t = T.dot(s_t,w2)
+    y_t = rectify(T.dot(s_t,w2))
     return [s_t, y_t]
 
 def decode(x_t, mem, w1, wH, w2):
@@ -77,29 +77,46 @@ class rmsprop(object):
             updates.append((param, param + update2))
         return updates
 
-memSize = 50    
-    
+memSize = 10
+
 X = T.tensor3() 
-s0 = theano.shared(np.zeros( (nSamples,memSize), dtype=theano.config.floatX))
-s0_2 = theano.shared(np.zeros( (nSamples,memSize), dtype=theano.config.floatX))
+s0 = init_weights((nSamples, memSize))
+s0_2 = init_weights((nSamples, memSize))
 
-w1 = init_weights((nFeats, memSize))
-wH = init_weights((memSize, memSize))
-w2 = init_weights((memSize,1))
+eW1 = init_weights((nFeats, memSize))
+eWh = init_weights((memSize, memSize))
+eW2 = init_weights((memSize,nFeats))
 
-[s, y], _ = theano.scan(encode, sequences=X, outputs_info=[s0, None], non_sequences=[w1, wH, w2], strict=True)
+dW1 = init_weights((nFeats, memSize))
+dWh = init_weights((memSize, memSize))
+dW2 = init_weights((memSize,2))
 
-cost = mse(y, X)
+[s, y], _ = theano.scan(encode, sequences=X, outputs_info=[s0, None], non_sequences=[eW1, eWh, eW2], strict=True)
+code = y[1::2]
+[s, y], _ = theano.scan(decode, sequences=code, outputs_info=[s0_2, None], non_sequences=[dW1, dWh, dW2], strict=True)
 
-params = [w1, wH, w2]
+decoded = y.dimshuffle(1,0,2)
+decoded = decoded.flatten(2)
+decoded = decoded.dimshuffle(1,0)
+decoded = decoded.reshape((timeSteps, nSamples, nFeats))
+
+cost = mse(decoded, X)
+
+params = [eW1, eWh, eW2, dW1, dWh, dW2, s0, s0_2]
 grads = T.grad(cost, params)
 opt = rmsprop(params)
 updates = opt.updates(params, grads, 0.001, 0.9)
 
 train = theano.function(inputs=[X], outputs=cost, updates=updates, allow_input_downcast=True)
-
-predict = theano.function(inputs=[X], outputs=y, allow_input_downcast=True)
+encode = theano.function(inputs=[X], outputs=code, allow_input_downcast=True)
+predict = theano.function(inputs=[X], outputs=decoded, allow_input_downcast=True)
 
 for i in range(5000):
+    print "---------------------------"
+    print i
     cost = train(trX)
     print cost
+
+print trX[:,0,:]
+print encode(trX)[:,0,:]
+print predict(trX)[:,0,:]
