@@ -1,16 +1,17 @@
 import theano
 from theano import tensor as T
 import numpy as np
-from load import loadLinearDataset
+from load import *
 from sklearn import datasets
 
-trX, trY = loadLinearDataset()
+trX = loadDataset1()
 
 trX = trX.reshape( (361, 20, 1) ) # samples X time X features
 trX = np.transpose(trX, (1,0,2) ) # time X samples X feats
 
-timeSteps, nSamples, nFeats = trX.shape
+trX = (trX - trX.min())/trX.max()
 
+timeSteps, nSamples, nFeats = trX.shape
 
 def floatX(X):
     return np.asarray(X, dtype=theano.config.floatX)
@@ -117,6 +118,6 @@ for i in range(5000):
     cost = train(trX)
     print cost
 
-print trX[:,0,:]
-print encode(trX)[:,0,:]
-print predict(trX)[:,0,:]
+print trX[:,-1,:]
+print encode(trX)[:,-1,:]
+print predict(trX)[:,-1,:]

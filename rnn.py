@@ -1,16 +1,15 @@
 import theano
 from theano import tensor as T
 import numpy as np
-from load import loadLinearDataset
+from load import *
 from sklearn import datasets
 
-trX, trY = loadLinearDataset()
+trX, trY = loadLabeledDataset1()
 
 trX = trX.reshape( (361, 20, 1) )
 trX = np.transpose(trX, (1,0,2) )
 
 timeSteps, nSamples, nFeats = trX.shape
-
 
 def floatX(X):
     return np.asarray(X, dtype=theano.config.floatX)
